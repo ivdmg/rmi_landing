@@ -9,7 +9,7 @@ import {
 import './styles.css';
 import { Dna } from './Dna';
 
-const address = '432045, Ульяновская область, г. Ульяновск, Московское шоссе, д. 3, пом. 105';
+const address = '432045, Россия, Ульяновская область, г. Ульяновск, Московское шоссе, д. 3, пом. 105';
 const media = import.meta.env.BASE_URL + 'media/';
 
 const equipment = [
@@ -258,6 +258,8 @@ function App() {
               <div className="wide"><dt>Юридический адрес</dt><dd>{address}</dd></div>
               <div><dt>ИНН</dt><dd>7300054779</dd></div>
               <div><dt>ОГРН</dt><dd>1267300006797</dd></div>
+              <div className="wide"><dt>Телефон</dt><dd><a href="tel:+79063906313">+7 (906) 390-63-13</a></dd></div>
+              <div className="wide"><dt>Электронная почта для связи и заявлений по ст. 15.7 закона № 149-ФЗ</dt><dd><a href="mailto:krjchkvjulija133@yandex.ru">krjchkvjulija133@yandex.ru</a></dd></div>
             </dl>
           </div>
           <div className="footer-bottom glass">
