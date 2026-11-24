@@ -1,5 +1,5 @@
 import { motion, useScroll, useTransform, useReducedMotion, type MotionValue } from 'motion/react';
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Activity, ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
@@ -63,20 +63,64 @@ function Brand() {
 function EquipmentGallery({ current, setCurrent }: { current: number; setCurrent: (index: number) => void }) {
   const track = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  const count = equipment.length;
+  const middle = count * 2;
+  const position = useRef(middle);
+  const destination = (el: HTMLDivElement, index: number) => {
+    const card = el.children[index] as HTMLElement;
+    return card.offsetLeft + card.offsetWidth / 2 - el.clientWidth / 2;
+  };
+  const nearest = (el: HTMLDivElement) => {
+    const step = destination(el, 1) - destination(el, 0);
+    return Math.max(0, Math.min(el.children.length - 1,
+      Math.round((el.scrollLeft - destination(el, 0)) / step)));
+  };
+  useLayoutEffect(() => {
+    const el = track.current!;
+    el.scrollLeft = destination(el, middle);
+    const normalize = () => {
+      const index = nearest(el);
+      const centered = middle + index % count;
+      position.current = centered;
+      if (index !== centered) el.scrollLeft = destination(el, centered);
+    };
+    el.addEventListener('scrollend', normalize);
+    const resize = new ResizeObserver(() => {
+      el.scrollLeft = destination(el, position.current);
+    });
+    resize.observe(el);
+    return () => {
+      resize.disconnect();
+      el.removeEventListener('scrollend', normalize);
+    };
+  }, [count, middle]);
   const select = (index: number) => {
-    const card = track.current?.children[index] as HTMLElement | undefined;
-    if (card && track.current) track.current.scrollTo({left: card.offsetLeft - (track.current.clientWidth-card.clientWidth)/2, behavior: reduced ? 'instant' : 'smooth'});
+    const el = track.current;
+    if (!el || !el.children[index]) return;
+    position.current = index;
+    el.scrollTo({left: destination(el, index), behavior: reduced ? 'instant' : 'smooth'});
   };
   return <section className="section equipment-section" id="equipment" aria-labelledby="equipment-title">
     <div className="shell section-heading"><h2 id="equipment-title">Примеры инвентаря</h2></div>
     <div ref={track} className="card-carousel" role="region" aria-label="Типы медицинского инвентаря" tabIndex={0}
-      onKeyDown={e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();select(Math.max(0,Math.min(3,current+(e.key==='ArrowRight'?1:-1))));}}}
-      onScroll={()=>{const el=track.current!; const center=el.scrollLeft+el.clientWidth/2; let nearest=0, distance=Infinity; Array.from(el.children).forEach((node,i)=>{const card=node as HTMLElement;const d=Math.abs(card.offsetLeft+card.clientWidth/2-center);if(d<distance){distance=d;nearest=i;}});setCurrent(nearest);}}>
-      {equipment.map((entry,index)=><button className={'equipment-card glass '+(index===current?'is-active':'')} key={entry.file} aria-pressed={index===current} onClick={()=>select(index)}>
-        <span className="card-number">0{index+1} / 04</span><img src={media+entry.file} alt={entry.alt} loading="lazy"/><h3>{entry.name}</h3><p>{entry.description}</p>
-      </button>)}
+      onKeyDown={e => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        select(position.current + (e.key === 'ArrowRight' ? 1 : -1));
+      }}
+      onScroll={e => setCurrent(nearest(e.currentTarget) % count)}>
+      {Array.from({length: 5}, (_, copy) => equipment.map((entry, index) =>
+        <button className={'equipment-card glass ' + (index === current ? 'is-active' : '')}
+          key={copy + entry.file} aria-hidden={copy !== 2 || undefined}
+          tabIndex={copy === 2 ? 0 : -1} aria-pressed={index === current}
+          onClick={() => select(copy * count + index)}>
+          <span className="card-number">0{index + 1} / 04</span>
+          <img src={media + entry.file} alt={entry.alt}/>
+          <h3>{entry.name}</h3><p>{entry.description}</p>
+        </button>
+      ))}
     </div>
-    <div className="gallery-controls glass"><button aria-label="Предыдущий прибор" disabled={current===0} onClick={()=>select(current-1)}><ArrowLeft size={20}/></button><span aria-live="polite">{current+1} / 4 <small>Листайте приборы</small></span><button aria-label="Следующий прибор" disabled={current===3} onClick={()=>select(current+1)}><ArrowRight size={20}/></button></div>
+    <div className="gallery-controls glass"><button aria-label="Предыдущий прибор" onClick={()=>select(position.current - 1)}><ArrowLeft size={20}/></button><span aria-live="polite">{current+1} / 4 <small>Листайте приборы</small></span><button aria-label="Следующий прибор" onClick={()=>select(position.current + 1)}><ArrowRight size={20}/></button></div>
   </section>;
 }
 
@@ -87,9 +131,9 @@ const documents = [
 function Document({index, progress}: {index:number; progress:MotionValue<number>}) {
   const reduced=useReducedMotion();
   const start=index*.5;
-  const y=useTransform(progress,[start,start+.08,start+.25,start+.43],[20,0,0,265]);
-  const opacity=useTransform(progress,[start,start+.06,start+.38,start+.46],[index===0?1:0,1,1,0]);
-  const scale=useTransform(progress,[start+.25,start+.43],[1,.87]);
+  const y=useTransform(progress,[start,start+.08,start+.25,start+.43],['20px','0px','0px',index === 0 ? '71%' : '75%']);
+  const opacity=useTransform(progress,[start,start+.06],[index===0?1:0,1]);
+  const scale=useTransform(progress,[start+.25,start+.43],[1,.79]);
   const [title,text,label,value]=documents[index];
   return <motion.article className="folder-paper" style={reduced?{}:{y,opacity,scale}}>
     <div className="document-top"><span>РМИ / ПРОФИЛЬ</span><span>0{index+1}</span></div>
@@ -107,9 +151,9 @@ function About() {
 function Hero() {
   const ref=useRef<HTMLElement>(null);
   const reduced=useReducedMotion();
-  const {scrollYProgress}=useScroll({target:ref,offset:['start start','end end']});
-  const y=useTransform(scrollYProgress,[0,.85],['0px','270px']);
-  const deviceY=useTransform(scrollYProgress,[0,.85],['0px','-70px']);
+  const {scrollYProgress}=useScroll({target:ref,offset:['start start','155px start']});
+  const y=useTransform(scrollYProgress,[0,.85],['0px','135px']);
+  const deviceY=useTransform(scrollYProgress,[0,.85],['0px','-48px']);
   return <section ref={ref} className="hero" aria-labelledby="hero-title"><div className="hero-stage"><div className="hero-layout shell">
     <motion.div className="hero-copy glass" style={reduced?{}:{'--mobile-copy-y':y} as React.CSSProperties}>
       <h1 id="hero-title">Ремонт<br/><em>медицинского</em><br/>инвентаря</h1><p className="hero-description">Обслуживание начинается с точного описания прибора и неисправности. Узнайте, какие сведения помогут обсудить ремонт.</p><a className="button" href="#equipment">Смотреть инвентарь <ArrowDown size={18}/></a>
