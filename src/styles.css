@@ -72,3 +72,9 @@ footer dt { color: #092b20; }
 @media (max-width: 690px) and (prefers-reduced-motion: reduce) {
   .hero { height: auto; }
 }
+
+footer {
+  background: rgb(0 127 81 / 76%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
